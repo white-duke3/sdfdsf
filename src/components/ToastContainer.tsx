@@ -10,11 +10,7 @@ export default function ToastContainer() {
       {state.toasts.map(toast => (
         <div
           key={toast.id}
-          className="flex items-center gap-3 px-4 py-3 rounded-xl shadow-lg animate-fade-in min-w-[280px] max-w-[400px]"
-          style={{
-            backgroundColor: 'var(--color-surface)',
-            border: '1px solid var(--color-border)',
-          }}
+          className="flex items-center gap-3 px-4 py-3 rounded-2xl shadow-xl animate-slide-up min-w-[280px] max-w-[400px] card"
         >
           {toast.type === 'success' && <CheckCircle className="w-5 h-5 flex-shrink-0" style={{ color: 'var(--color-success)' }} />}
           {toast.type === 'error' && <XCircle className="w-5 h-5 flex-shrink-0" style={{ color: 'var(--color-danger)' }} />}

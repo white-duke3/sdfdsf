@@ -10,6 +10,7 @@ import EmojiPicker from './EmojiPicker';
 import VoiceRecorder from './VoiceRecorder';
 import FileDropZone from './FileDropZone';
 import ImageViewer from './ImageViewer';
+import ChatMediaViewer from './ChatMediaViewer';
 import { format } from 'date-fns';
 
 interface Props {
@@ -24,6 +25,7 @@ export default function ChatArea({ onBack }: Props) {
   const [contextMenu, setContextMenu] = useState<{ x: number; y: number; message: Message } | null>(null);
   const [isRecordingVoice, setIsRecordingVoice] = useState(false);
   const [viewingImage, setViewingImage] = useState<{ src: string; alt: string } | null>(null);
+  const [showMediaViewer, setShowMediaViewer] = useState(false);
   const messagesEndRef = useRef<HTMLDivElement>(null);
   const inputRef = useRef<HTMLTextAreaElement>(null);
   const fileInputRef = useRef<HTMLInputElement>(null);
@@ -197,7 +199,15 @@ export default function ChatArea({ onBack }: Props) {
             <Bookmark className="w-5 h-5 text-white fill-white" />
           </div>
         ) : (
-          otherUser && <Avatar user={otherUser} size={40} />
+          otherUser && (
+            <button 
+              onClick={() => setShowMediaViewer(true)}
+              className="flex-shrink-0 hover:opacity-80 transition-opacity"
+              title="Просмотр медиа и файлов"
+            >
+              <Avatar user={otherUser} size={40} />
+            </button>
+          )
         )}
         <div className="flex-1 min-w-0">
           <p className="font-semibold text-sm truncate" style={{ color: isSaved ? 'var(--color-primary)' : 'var(--color-text)' }}>
@@ -221,7 +231,7 @@ export default function ChatArea({ onBack }: Props) {
       </div>
 
       {/* Messages */}
-      <div className="flex-1 overflow-y-auto px-4 py-4 relative" style={{
+      <div className="flex-1 overflow-y-auto px-4 py-4 relative scroll-smooth" style={{
         backgroundImage: `radial-gradient(circle at 25px 25px, var(--color-border) 1px, transparent 0)`,
         backgroundSize: '50px 50px',
         backgroundPosition: '0 0',
@@ -318,17 +328,17 @@ export default function ChatArea({ onBack }: Props) {
         />
       ) : (
         <div className="px-4 py-3" style={{ backgroundColor: 'var(--color-surface)', borderTop: '1px solid var(--color-border)' }}>
-          <div className="flex items-end gap-2">
+          <div className="flex items-center gap-2">
             <button 
               onClick={() => fileInputRef.current?.click()}
-              className="p-2 rounded-lg transition-all-fast hover:opacity-70 flex-shrink-0" 
+              className="p-2.5 rounded-full transition-all-fast hover:opacity-70 flex-shrink-0" 
               style={{ color: 'var(--color-text-secondary)' }}
               title="Прикрепить файл"
             >
               <Paperclip className="w-5 h-5" />
             </button>
             <EmojiPicker onSelect={(emoji) => setInputText(prev => prev + emoji)} />
-            <div className="flex-1 relative">
+            <div className="flex-1">
               <textarea
                 ref={inputRef}
                 value={inputText}
@@ -418,6 +428,20 @@ export default function ChatArea({ onBack }: Props) {
         src={viewingImage.src}
         alt={viewingImage.alt}
         onClose={() => setViewingImage(null)}
+      />
+    )}
+
+    {/* Media Viewer */}
+    {showMediaViewer && otherUser && (
+      <ChatMediaViewer
+        messages={state.messages}
+        userName={otherUser.name}
+        userAvatar={otherUser.avatar}
+        onClose={() => setShowMediaViewer(false)}
+        onImageClick={(src, alt) => {
+          setViewingImage({ src, alt });
+          setShowMediaViewer(false);
+        }}
       />
     )}
     </FileDropZone>

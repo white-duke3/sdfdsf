@@ -62,7 +62,7 @@ export default function MessageBubble({ message, isOwn, onContextMenu, onReply, 
 
   return (
     <div
-      className={`flex mb-2 animate-fade-in ${isOwn ? 'justify-end' : 'justify-start'}`}
+      className={`flex mb-2 animate-message-in ${isOwn ? 'justify-end' : 'justify-start'}`}
       onContextMenu={e => onContextMenu(e, message)}
     >
       <div className={`flex gap-2 max-w-[75%] ${isOwn ? 'flex-row-reverse' : ''}`}>
@@ -121,7 +121,14 @@ export default function MessageBubble({ message, isOwn, onContextMenu, onReply, 
             )}
             {message.type === 'audio' && message.attachment && (
               <div className="flex items-center gap-3 py-1 min-w-[220px]">
-                <button className="w-10 h-10 rounded-full flex items-center justify-center flex-shrink-0 transition-all-fast hover:opacity-80 hover:scale-105" style={{ backgroundColor: isOwn ? 'rgba(255,255,255,0.2)' : 'var(--color-primary)' }}>
+                <button 
+                  onClick={() => {
+                    const audio = new Audio(message.attachment!.url);
+                    audio.play();
+                  }}
+                  className="w-10 h-10 rounded-full flex items-center justify-center flex-shrink-0 transition-all-fast hover:opacity-80 hover:scale-105" 
+                  style={{ backgroundColor: isOwn ? 'rgba(255,255,255,0.2)' : 'var(--color-primary)' }}
+                >
                   <svg className="w-4 h-4 ml-0.5" fill="white" viewBox="0 0 24 24">
                     <path d="M8 5v14l11-7z"/>
                   </svg>

@@ -40,10 +40,10 @@ export default function EmojiPicker({ onSelect }: Props) {
   }, []);
 
   return (
-    <div className="relative" ref={ref}>
+    <div className="relative flex-shrink-0" ref={ref}>
       <button
         onClick={() => setIsOpen(!isOpen)}
-        className="p-2 rounded-lg transition-all-fast hover:opacity-70"
+        className="p-2.5 rounded-full transition-all-fast hover:opacity-70"
         style={{ color: 'var(--color-text-secondary)' }}
       >
         <Smile className="w-5 h-5" />

@@ -30,7 +30,7 @@ export default function Avatar({ user, size = 40, className = '' }: Props) {
       <img
         src={user.avatar}
         alt={user.name}
-        className={`rounded-full object-cover ${className}`}
+        className={`rounded-full object-cover ring-2 ring-white dark:ring-gray-800 ${className}`}
         style={{ width: size, height: size }}
       />
     );
@@ -38,7 +38,7 @@ export default function Avatar({ user, size = 40, className = '' }: Props) {
 
   return (
     <div
-      className={`rounded-full flex items-center justify-center font-semibold text-white ${className}`}
+      className={`rounded-full flex items-center justify-center font-semibold text-white shadow-md ${className}`}
       style={{
         width: size,
         height: size,

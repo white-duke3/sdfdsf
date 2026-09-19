@@ -65,19 +65,19 @@ export default function AuthPage() {
   };
 
   return (
-    <div className="min-h-screen flex items-center justify-center p-4" style={{ backgroundColor: 'var(--color-bg-secondary)' }}>
+    <div className="min-h-screen flex items-center justify-center p-4 gradient-warm">
       <div className="w-full max-w-md animate-fade-in">
         {/* Logo */}
         <div className="text-center mb-8">
-          <div className="inline-flex items-center justify-center w-16 h-16 rounded-2xl mb-4" style={{ backgroundColor: 'var(--color-primary)' }}>
-            <MessageCircle className="w-8 h-8 text-white" />
+          <div className="inline-flex items-center justify-center w-20 h-20 rounded-3xl mb-4 shadow-lg gradient-primary">
+            <MessageCircle className="w-10 h-10 text-white" />
           </div>
-          <h1 className="text-3xl font-bold" style={{ color: 'var(--color-text)' }}>ChatFlow</h1>
-          <p className="mt-2" style={{ color: 'var(--color-text-secondary)' }}>Современный мессенджер</p>
+          <h1 className="text-4xl font-bold mb-2" style={{ color: 'var(--color-text)' }}>ChatFlow</h1>
+          <p className="text-sm" style={{ color: 'var(--color-text-secondary)' }}>Современный мессенджер для общения</p>
         </div>
 
         {/* Card */}
-        <div className="rounded-2xl shadow-lg p-8" style={{ backgroundColor: 'var(--color-surface)', border: '1px solid var(--color-border)' }}>
+        <div className="rounded-3xl shadow-xl p-8 card">
           {/* Tabs */}
           <div className="flex mb-6 rounded-xl p-1" style={{ backgroundColor: 'var(--color-bg-tertiary)' }}>
             <button
@@ -143,8 +143,7 @@ export default function AuthPage() {
               <button
                 type="submit"
                 disabled={loading}
-                className="w-full py-3 rounded-xl text-white font-medium text-sm transition-all-fast hover:opacity-90 disabled:opacity-50"
-                style={{ backgroundColor: 'var(--color-primary)' }}
+                className="w-full py-3 rounded-xl text-white font-medium text-sm btn-primary disabled:opacity-50 disabled:cursor-not-allowed"
               >
                 {loading ? 'Загрузка...' : 'Войти'}
               </button>
@@ -220,8 +219,7 @@ export default function AuthPage() {
               <button
                 type="submit"
                 disabled={loading}
-                className="w-full py-3 rounded-xl text-white font-medium text-sm transition-all-fast hover:opacity-90 disabled:opacity-50"
-                style={{ backgroundColor: 'var(--color-primary)' }}
+                className="w-full py-3 rounded-xl text-white font-medium text-sm btn-primary disabled:opacity-50 disabled:cursor-not-allowed"
               >
                 {loading ? 'Загрузка...' : 'Создать аккаунт'}
               </button>

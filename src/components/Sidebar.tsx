@@ -190,7 +190,7 @@ export default function Sidebar({ onOpenSettings, isMobile }: Props) {
                   <button
                     key={conv.id}
                     onClick={() => dispatch({ type: 'SET_ACTIVE_CONVERSATION', id: conv.id })}
-                    className="w-full flex items-center gap-3 px-4 py-3 transition-all-fast text-left"
+                    className="w-full flex items-center gap-3 px-4 py-3 transition-all-fast text-left hover-lift"
                     style={{
                       backgroundColor: isActive ? 'var(--color-primary-light)' : 'transparent',
                     }}
