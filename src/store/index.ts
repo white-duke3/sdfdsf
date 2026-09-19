@@ -244,6 +244,29 @@ export function initializeStore(): void {
     savedConvAlice.lastMessage = seedMessages[9]; // msg-seed-saved-2
     savedConvBob.lastMessage = seedMessages[10]; // msg-seed-saved-3
     setItem(STORAGE_KEYS.CONVERSATIONS, [conv1, conv2, conv3, savedConvAlice, savedConvBob, savedConvJohn, savedConvMaria]);
+  } else {
+    // Migration: ensure all existing users have saved messages conversations
+    const conversations = getItem<Conversation[]>(STORAGE_KEYS.CONVERSATIONS, []);
+    let updated = false;
+    
+    users.forEach(user => {
+      const savedConvId = `saved-${user.id}`;
+      const exists = conversations.find(c => c.id === savedConvId);
+      if (!exists) {
+        conversations.push({
+          id: savedConvId,
+          type: 'direct',
+          members: [user.id, user.id],
+          unreadCount: 0,
+          createdAt: user.createdAt,
+        });
+        updated = true;
+      }
+    });
+    
+    if (updated) {
+      setItem(STORAGE_KEYS.CONVERSATIONS, conversations);
+    }
   }
 }
 

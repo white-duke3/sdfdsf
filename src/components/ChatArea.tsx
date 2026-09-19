@@ -3,6 +3,7 @@ import { useApp } from '../context/AppContext';
 import { Message } from '../types';
 import { getMessages, updateMessage as storeUpdateMessage, deleteMessage as storeDeleteMessage, isSavedMessagesConversation } from '../store';
 import { ArrowLeft, Phone, Video, MoreVertical, Send, Mic, Paperclip, X, Reply, Edit3, Trash2, Copy, Forward, Bookmark } from 'lucide-react';
+import { useRef as useReactRef } from 'react';
 import Avatar from './Avatar';
 import MessageBubble from './MessageBubble';
 import EmojiPicker from './EmojiPicker';
@@ -16,7 +17,7 @@ interface Props {
 }
 
 export default function ChatArea({ onBack }: Props) {
-  const { state, dispatch, sendMessage, getOtherUser, isUserOnline } = useApp();
+  const { state, dispatch, sendMessage, getOtherUser, isUserOnline, addToast } = useApp();
   const [inputText, setInputText] = useState('');
   const [replyTo, setReplyTo] = useState<Message | null>(null);
   const [editingMessage, setEditingMessage] = useState<Message | null>(null);
@@ -25,6 +26,7 @@ export default function ChatArea({ onBack }: Props) {
   const [viewingImage, setViewingImage] = useState<{ src: string; alt: string } | null>(null);
   const messagesEndRef = useRef<HTMLDivElement>(null);
   const inputRef = useRef<HTMLTextAreaElement>(null);
+  const fileInputRef = useRef<HTMLInputElement>(null);
 
   const activeConv = state.conversations.find(c => c.id === state.activeConversationId);
   const isSaved = activeConv && state.currentUser ? isSavedMessagesConversation(activeConv, state.currentUser.id) : false;
@@ -122,6 +124,14 @@ export default function ChatArea({ onBack }: Props) {
 
   const handleFileSend = (file: File) => {
     if (!state.activeConversationId) return;
+    
+    // Validate file size (max 50MB)
+    const MAX_SIZE = 50 * 1024 * 1024;
+    if (file.size > MAX_SIZE) {
+      addToast('Файл слишком большой (макс. 50 МБ)', 'error');
+      return;
+    }
+    
     const url = URL.createObjectURL(file);
     let type: 'image' | 'video' | 'file' = 'file';
     if (file.type.startsWith('image/')) type = 'image';
@@ -138,6 +148,8 @@ export default function ChatArea({ onBack }: Props) {
         url,
       },
     });
+    
+    addToast('Файл отправлен', 'success');
   };
 
   if (!activeConv || (!otherUser && !isSaved)) {
@@ -267,52 +279,22 @@ export default function ChatArea({ onBack }: Props) {
         </div>
       )}
 
-      {/* Input */}
-      <div className="px-4 py-3" style={{ backgroundColor: 'var(--color-surface)', borderTop: '1px solid var(--color-border)' }}>
-        <div className="flex items-end gap-2">
-          <button className="p-2 rounded-lg transition-all-fast hover:opacity-70 flex-shrink-0" style={{ color: 'var(--color-text-secondary)' }}>
-            <Paperclip className="w-5 h-5" />
-          </button>
-          <EmojiPicker onSelect={(emoji) => setInputText(prev => prev + emoji)} />
-          <div className="flex-1 relative">
-            <textarea
-              ref={inputRef}
-              value={inputText}
-              onChange={e => setInputText(e.target.value)}
-              onKeyDown={handleKeyDown}
-              placeholder="Напишите сообщение..."
-              rows={1}
-              className="w-full px-4 py-2.5 rounded-2xl text-sm resize-none transition-all-fast"
-              style={{
-                backgroundColor: 'var(--color-bg-tertiary)',
-                color: 'var(--color-text)',
-                border: '1px solid var(--color-border)',
-                maxHeight: '120px',
-              }}
-            />
-          </div>
-          {inputText.trim() ? (
-            <button
-              onClick={handleSend}
-              className="p-2.5 rounded-full transition-all-fast hover:opacity-90 flex-shrink-0"
-              style={{ backgroundColor: 'var(--color-primary)' }}
-            >
-              <Send className="w-5 h-5 text-white" />
-            </button>
-          ) : (
-            <button
-              onClick={() => setIsRecordingVoice(true)}
-              className="p-2.5 rounded-full transition-all-fast hover:opacity-70 flex-shrink-0"
-              style={{ color: 'var(--color-text-secondary)' }}
-            >
-              <Mic className="w-5 h-5" />
-            </button>
-          )}
-        </div>
-      </div>
+      {/* Hidden file input */}
+      <input
+        ref={fileInputRef}
+        type="file"
+        className="hidden"
+        onChange={(e) => {
+          const file = e.target.files?.[0];
+          if (file) {
+            handleFileSend(file);
+            e.target.value = '';
+          }
+        }}
+      />
 
-      {/* Voice Recorder */}
-      {isRecordingVoice && (
+      {/* Input or Voice Recorder */}
+      {isRecordingVoice ? (
         <VoiceRecorder
           onSend={(blob, duration) => {
             if (state.activeConversationId) {
@@ -334,6 +316,55 @@ export default function ChatArea({ onBack }: Props) {
           }}
           onCancel={() => setIsRecordingVoice(false)}
         />
+      ) : (
+        <div className="px-4 py-3" style={{ backgroundColor: 'var(--color-surface)', borderTop: '1px solid var(--color-border)' }}>
+          <div className="flex items-end gap-2">
+            <button 
+              onClick={() => fileInputRef.current?.click()}
+              className="p-2 rounded-lg transition-all-fast hover:opacity-70 flex-shrink-0" 
+              style={{ color: 'var(--color-text-secondary)' }}
+              title="Прикрепить файл"
+            >
+              <Paperclip className="w-5 h-5" />
+            </button>
+            <EmojiPicker onSelect={(emoji) => setInputText(prev => prev + emoji)} />
+            <div className="flex-1 relative">
+              <textarea
+                ref={inputRef}
+                value={inputText}
+                onChange={e => setInputText(e.target.value)}
+                onKeyDown={handleKeyDown}
+                placeholder="Напишите сообщение..."
+                rows={1}
+                className="w-full px-4 py-2.5 rounded-2xl text-sm resize-none transition-all-fast"
+                style={{
+                  backgroundColor: 'var(--color-bg-tertiary)',
+                  color: 'var(--color-text)',
+                  border: '1px solid var(--color-border)',
+                  maxHeight: '120px',
+                }}
+              />
+            </div>
+            {inputText.trim() ? (
+              <button
+                onClick={handleSend}
+                className="p-2.5 rounded-full transition-all-fast hover:opacity-90 flex-shrink-0"
+                style={{ backgroundColor: 'var(--color-primary)' }}
+              >
+                <Send className="w-5 h-5 text-white" />
+              </button>
+            ) : (
+              <button
+                onClick={() => setIsRecordingVoice(true)}
+                className="p-2.5 rounded-full transition-all-fast hover:opacity-70 flex-shrink-0"
+                style={{ color: 'var(--color-text-secondary)' }}
+                title="Голосовое сообщение"
+              >
+                <Mic className="w-5 h-5" />
+              </button>
+            )}
+          </div>
+        </div>
       )}
 
       {/* Context Menu */}

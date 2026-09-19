@@ -97,43 +97,76 @@ export default function MessageBubble({ message, isOwn, onContextMenu, onReply, 
           {/* Message bubble */}
           <div
             id={`msg-${message.id}`}
-            className={`px-4 py-2 ${isOwn ? 'msg-bubble-out' : 'msg-bubble-in'}`}
+            className={`px-4 py-2 ${isOwn ? 'msg-bubble-out' : 'msg-bubble-in'} group relative`}
           >
             {message.type === 'image' && message.attachment && (
-              <div className="mb-1">
+              <div className="mb-1 -mx-1 overflow-hidden rounded-xl">
                 <img
                   src={message.attachment.url}
                   alt={message.attachment.originalName}
-                  className="rounded-lg max-w-[280px] max-h-[280px] object-cover cursor-pointer hover:opacity-90 transition-opacity"
+                  className="max-w-[280px] max-h-[280px] object-cover cursor-pointer hover:scale-105 transition-transform duration-300"
                   onClick={() => onImageClick?.(message.attachment!.url, message.attachment!.originalName)}
+                  loading="lazy"
                 />
               </div>
             )}
             {message.type === 'video' && message.attachment && (
-              <div className="mb-1">
+              <div className="mb-1 -mx-1">
                 <video
                   src={message.attachment.url}
                   controls
-                  className="rounded-lg max-w-[280px] max-h-[280px]"
+                  className="rounded-xl max-w-[280px] max-h-[280px]"
                 />
               </div>
             )}
             {message.type === 'audio' && message.attachment && (
-              <div className="mb-1 flex items-center gap-2">
-                <audio src={message.attachment.url} controls className="max-w-[240px]" />
+              <div className="flex items-center gap-3 py-1 min-w-[220px]">
+                <button className="w-10 h-10 rounded-full flex items-center justify-center flex-shrink-0 transition-all-fast hover:opacity-80 hover:scale-105" style={{ backgroundColor: isOwn ? 'rgba(255,255,255,0.2)' : 'var(--color-primary)' }}>
+                  <svg className="w-4 h-4 ml-0.5" fill="white" viewBox="0 0 24 24">
+                    <path d="M8 5v14l11-7z"/>
+                  </svg>
+                </button>
+                <div className="flex-1">
+                  <div className="flex items-center gap-0.5 h-8">
+                    {Array.from({ length: 30 }).map((_, i) => {
+                      // Generate consistent waveform based on message ID
+                      const seed = message.id ? message.id.charCodeAt(i % message.id.length) : i;
+                      const height = 6 + Math.sin(i * 0.4 + seed * 0.1) * 10 + Math.cos(i * 0.7) * 4;
+                      return (
+                        <div
+                          key={i}
+                          className="w-0.5 rounded-full transition-all"
+                          style={{
+                            height: `${Math.max(4, height)}px`,
+                            backgroundColor: isOwn ? 'rgba(255,255,255,0.7)' : 'var(--color-primary)',
+                            opacity: 0.6 + Math.sin(i * 0.3) * 0.3,
+                          }}
+                        />
+                      );
+                    })}
+                  </div>
+                  <span className="text-[10px] mt-0.5" style={{ color: isOwn ? 'rgba(255,255,255,0.7)' : 'var(--color-text-muted)' }}>
+                    {message.attachment.duration ? `${Math.floor(message.attachment.duration / 60)}:${(message.attachment.duration % 60).toString().padStart(2, '0')}` : '0:00'}
+                  </span>
+                </div>
               </div>
             )}
             {message.type === 'file' && message.attachment && (
-              <div className="flex items-center gap-3 mb-1 p-2 rounded-lg" style={{ backgroundColor: isOwn ? 'rgba(255,255,255,0.1)' : 'var(--color-bg-tertiary)' }}>
-                <div className="w-10 h-10 rounded-lg flex items-center justify-center flex-shrink-0" style={{ backgroundColor: 'var(--color-primary)', }}>
-                  <span className="text-white text-xs font-bold">FILE</span>
+              <div className="flex items-center gap-3 py-1">
+                <div className="w-11 h-11 rounded-xl flex items-center justify-center flex-shrink-0" style={{ backgroundColor: isOwn ? 'rgba(255,255,255,0.15)' : 'var(--color-bg-tertiary)' }}>
+                  <svg className="w-5 h-5" fill="none" stroke={isOwn ? 'white' : 'var(--color-primary)'} viewBox="0 0 24 24" strokeWidth="2">
+                    <path strokeLinecap="round" strokeLinejoin="round" d="M7 21h10a2 2 0 002-2V9.414a1 1 0 00-.293-.707l-5.414-5.414A1 1 0 0012.586 3H7a2 2 0 00-2 2v14a2 2 0 002 2z" />
+                  </svg>
                 </div>
-                <div className="min-w-0">
+                <div className="min-w-0 flex-1">
                   <p className="text-xs font-medium truncate" style={{ color: isOwn ? '#fff' : 'var(--color-text)' }}>
                     {message.attachment.originalName}
                   </p>
-                  <p className="text-xs" style={{ color: isOwn ? 'rgba(255,255,255,0.7)' : 'var(--color-text-muted)' }}>
-                    {(message.attachment.size / 1024).toFixed(1)} KB
+                  <p className="text-[10px]" style={{ color: isOwn ? 'rgba(255,255,255,0.6)' : 'var(--color-text-muted)' }}>
+                    {message.attachment.size < 1024 * 1024 
+                      ? `${(message.attachment.size / 1024).toFixed(1)} KB`
+                      : `${(message.attachment.size / (1024 * 1024)).toFixed(1)} MB`
+                    }
                   </p>
                 </div>
               </div>
