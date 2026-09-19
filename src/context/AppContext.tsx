@@ -148,7 +148,8 @@ export function AppProvider({ children }: { children: ReactNode }) {
     const user = result;
     store.setCurrentUser(user);
     dispatch({ type: 'SET_USER', user });
-    dispatch({ type: 'SET_CONVERSATIONS', conversations: [] });
+    const convs = store.getConversations(user.id);
+    dispatch({ type: 'SET_CONVERSATIONS', conversations: convs });
     return null;
   }, []);
 
@@ -196,9 +197,11 @@ export function AppProvider({ children }: { children: ReactNode }) {
       dispatch({ type: 'UPDATE_MESSAGE', id: message.id, data: { status: 'delivered' } });
     }, 500);
 
-    // Simulate auto-reply for demo
+    // Simulate auto-reply for demo (skip for saved messages)
     const conv = store.getConversationById(conversationId);
-    if (conv) {
+    const isSaved = conv && store.isSavedMessagesConversation(conv, state.currentUser!.id);
+    
+    if (conv && !isSaved) {
       const otherUserId = conv.members.find(m => m !== state.currentUser!.id);
       if (otherUserId) {
         // Show typing

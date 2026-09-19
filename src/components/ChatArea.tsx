@@ -1,8 +1,8 @@
 import React, { useState, useRef, useEffect, useCallback } from 'react';
 import { useApp } from '../context/AppContext';
 import { Message } from '../types';
-import { getMessages, updateMessage as storeUpdateMessage, deleteMessage as storeDeleteMessage } from '../store';
-import { ArrowLeft, Phone, Video, MoreVertical, Send, Mic, Paperclip, X, Reply, Edit3, Trash2, Copy, Forward } from 'lucide-react';
+import { getMessages, updateMessage as storeUpdateMessage, deleteMessage as storeDeleteMessage, isSavedMessagesConversation } from '../store';
+import { ArrowLeft, Phone, Video, MoreVertical, Send, Mic, Paperclip, X, Reply, Edit3, Trash2, Copy, Forward, Bookmark } from 'lucide-react';
 import Avatar from './Avatar';
 import MessageBubble from './MessageBubble';
 import EmojiPicker from './EmojiPicker';
@@ -27,9 +27,10 @@ export default function ChatArea({ onBack }: Props) {
   const inputRef = useRef<HTMLTextAreaElement>(null);
 
   const activeConv = state.conversations.find(c => c.id === state.activeConversationId);
+  const isSaved = activeConv && state.currentUser ? isSavedMessagesConversation(activeConv, state.currentUser.id) : false;
   const otherUser = activeConv ? getOtherUser(activeConv) : undefined;
-  const isOnline = otherUser ? isUserOnline(otherUser.id) : false;
-  const isTyping = state.typingUsers.some(t => t.conversationId === state.activeConversationId);
+  const isOnline = otherUser && !isSaved ? isUserOnline(otherUser.id) : false;
+  const isTyping = !isSaved && state.typingUsers.some(t => t.conversationId === state.activeConversationId);
 
   useEffect(() => {
     if (state.activeConversationId) {
@@ -139,7 +140,7 @@ export default function ChatArea({ onBack }: Props) {
     });
   };
 
-  if (!activeConv || !otherUser) {
+  if (!activeConv || (!otherUser && !isSaved)) {
     return (
       <div className="flex-1 flex items-center justify-center" style={{ backgroundColor: 'var(--color-bg-secondary)' }}>
         <div className="text-center animate-fade-in">
@@ -179,11 +180,19 @@ export default function ChatArea({ onBack }: Props) {
             <ArrowLeft className="w-5 h-5" />
           </button>
         )}
-        <Avatar user={otherUser} size={40} />
+        {isSaved ? (
+          <div className="w-10 h-10 rounded-full flex items-center justify-center flex-shrink-0" style={{ backgroundColor: 'var(--color-primary)' }}>
+            <Bookmark className="w-5 h-5 text-white fill-white" />
+          </div>
+        ) : (
+          otherUser && <Avatar user={otherUser} size={40} />
+        )}
         <div className="flex-1 min-w-0">
-          <p className="font-semibold text-sm truncate" style={{ color: 'var(--color-text)' }}>{otherUser.name}</p>
+          <p className="font-semibold text-sm truncate" style={{ color: isSaved ? 'var(--color-primary)' : 'var(--color-text)' }}>
+            {isSaved ? 'Сохранённые сообщения' : otherUser?.name}
+          </p>
           <p className="text-xs" style={{ color: isTyping ? 'var(--color-primary)' : 'var(--color-text-muted)' }}>
-            {isTyping ? 'печатает...' : isOnline ? 'в сети' : formatLastSeen(otherUser.lastSeen)}
+            {isSaved ? 'Заметки и важные сообщения' : isTyping ? 'печатает...' : isOnline ? 'в сети' : otherUser ? formatLastSeen(otherUser.lastSeen) : ''}
           </p>
         </div>
         <div className="flex items-center gap-1">
@@ -217,15 +226,16 @@ export default function ChatArea({ onBack }: Props) {
               <MessageBubble
                 key={msg.id}
                 message={msg}
-                isOwn={msg.senderId === state.currentUser?.id}
+                isOwn={isSaved || msg.senderId === state.currentUser?.id}
                 onContextMenu={handleContextMenu}
                 onReply={handleReply}
+                onImageClick={(src, alt) => setViewingImage({ src, alt })}
                 allMessages={state.messages}
               />
             ))}
           </div>
         ))}
-        {isTyping && (
+        {isTyping && otherUser && (
           <div className="flex items-center gap-2 mb-2">
             <Avatar user={otherUser} size={28} />
             <div className="px-4 py-2.5 rounded-2xl" style={{ backgroundColor: 'var(--color-msg-in)' }}>

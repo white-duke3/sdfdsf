@@ -99,7 +99,35 @@ export function initializeStore(): void {
       unreadCount: 0,
       createdAt: '2024-03-03T10:00:00Z',
     };
-    setItem(STORAGE_KEYS.CONVERSATIONS, [conv1, conv2, conv3]);
+    // Create saved messages conversations for seed users
+    const savedConvAlice: Conversation = {
+      id: 'saved-user-alice',
+      type: 'direct',
+      members: ['user-alice', 'user-alice'],
+      unreadCount: 0,
+      createdAt: '2024-01-15T10:00:00Z',
+    };
+    const savedConvBob: Conversation = {
+      id: 'saved-user-bob',
+      type: 'direct',
+      members: ['user-bob', 'user-bob'],
+      unreadCount: 0,
+      createdAt: '2024-01-16T10:00:00Z',
+    };
+    const savedConvJohn: Conversation = {
+      id: 'saved-user-john',
+      type: 'direct',
+      members: ['user-john', 'user-john'],
+      unreadCount: 0,
+      createdAt: '2024-02-01T10:00:00Z',
+    };
+    const savedConvMaria: Conversation = {
+      id: 'saved-user-maria',
+      type: 'direct',
+      members: ['user-maria', 'user-maria'],
+      unreadCount: 0,
+      createdAt: '2024-02-10T10:00:00Z',
+    };
 
     // Seed messages
     const now = Date.now();
@@ -174,6 +202,38 @@ export function initializeStore(): void {
         createdAt: new Date(now - 86300000).toISOString(),
         readBy: ['user-bob', 'user-maria'],
       },
+      // Saved messages for Alice
+      {
+        id: 'msg-seed-saved-1',
+        conversationId: 'saved-user-alice',
+        senderId: 'user-alice',
+        type: 'text',
+        text: 'Не забыть купить продукты 🛒',
+        status: 'read',
+        createdAt: new Date(now - 172800000).toISOString(),
+        readBy: ['user-alice'],
+      },
+      {
+        id: 'msg-seed-saved-2',
+        conversationId: 'saved-user-alice',
+        senderId: 'user-alice',
+        type: 'text',
+        text: 'https://example.com/interesting-article - прочитать позже',
+        status: 'read',
+        createdAt: new Date(now - 86400000).toISOString(),
+        readBy: ['user-alice'],
+      },
+      // Saved messages for Bob
+      {
+        id: 'msg-seed-saved-3',
+        conversationId: 'saved-user-bob',
+        senderId: 'user-bob',
+        type: 'text',
+        text: 'TODO: Закончить рефакторинг API',
+        status: 'read',
+        createdAt: new Date(now - 259200000).toISOString(),
+        readBy: ['user-bob'],
+      },
     ];
     setItem(STORAGE_KEYS.MESSAGES, seedMessages);
 
@@ -181,7 +241,9 @@ export function initializeStore(): void {
     conv1.lastMessage = seedMessages[3];
     conv2.lastMessage = seedMessages[4];
     conv3.lastMessage = seedMessages[6];
-    setItem(STORAGE_KEYS.CONVERSATIONS, [conv1, conv2, conv3]);
+    savedConvAlice.lastMessage = seedMessages[9]; // msg-seed-saved-2
+    savedConvBob.lastMessage = seedMessages[10]; // msg-seed-saved-3
+    setItem(STORAGE_KEYS.CONVERSATIONS, [conv1, conv2, conv3, savedConvAlice, savedConvBob, savedConvJohn, savedConvMaria]);
   }
 }
 
@@ -241,7 +303,39 @@ export function registerUser(data: { name: string; username: string; email: stri
   passwords[newUser.id] = btoa(data.password);
   setItem('chatflow_passwords', passwords);
 
+  // Create saved messages conversation for new user
+  createSavedMessagesConversation(newUser.id);
+
   return newUser;
+}
+
+export function createSavedMessagesConversation(userId: string): Conversation {
+  const all = getItem<Conversation[]>(STORAGE_KEYS.CONVERSATIONS, []);
+  const savedConvId = `saved-${userId}`;
+  
+  // Check if already exists
+  const existing = all.find(c => c.id === savedConvId);
+  if (existing) return existing;
+
+  const savedConv: Conversation = {
+    id: savedConvId,
+    type: 'direct',
+    members: [userId, userId], // Same user twice for saved messages
+    unreadCount: 0,
+    createdAt: new Date().toISOString(),
+  };
+  all.push(savedConv);
+  setItem(STORAGE_KEYS.CONVERSATIONS, all);
+  return savedConv;
+}
+
+export function getSavedMessagesConversation(userId: string): Conversation | undefined {
+  const all = getItem<Conversation[]>(STORAGE_KEYS.CONVERSATIONS, []);
+  return all.find(c => c.id === `saved-${userId}`);
+}
+
+export function isSavedMessagesConversation(conv: Conversation, userId: string): boolean {
+  return conv.id === `saved-${userId}`;
 }
 
 export function loginUser(email: string, password: string): User | { error: string } {
@@ -257,6 +351,10 @@ export function loginUser(email: string, password: string): User | { error: stri
   user.online = true;
   user.lastSeen = new Date().toISOString();
   setItem(STORAGE_KEYS.USERS, users);
+  
+  // Ensure saved messages conversation exists
+  createSavedMessagesConversation(user.id);
+  
   return user;
 }
 

@@ -2,8 +2,9 @@ import React, { useState, useMemo } from 'react';
 import { useApp } from '../context/AppContext';
 import { User } from '../types';
 import { Search, Settings, Moon, Sun, MessageCircle } from 'lucide-react';
-import { searchUsers, getOrCreateConversation, getConversations } from '../store';
+import { searchUsers, getOrCreateConversation, getConversations, isSavedMessagesConversation } from '../store';
 import Avatar from '../components/Avatar';
+import { Bookmark } from 'lucide-react';
 
 interface Props {
   onOpenSettings: () => void;
@@ -17,12 +18,20 @@ export default function Sidebar({ onOpenSettings, isMobile }: Props) {
   const [searchResults, setSearchResults] = useState<User[]>([]);
 
   const sortedConversations = useMemo(() => {
+    if (!state.currentUser) return [];
+    const userId = state.currentUser.id;
     return [...state.conversations].sort((a, b) => {
+      // Saved messages always first
+      const aIsSaved = isSavedMessagesConversation(a, userId);
+      const bIsSaved = isSavedMessagesConversation(b, userId);
+      if (aIsSaved && !bIsSaved) return -1;
+      if (!aIsSaved && bIsSaved) return 1;
+      
       const aTime = a.lastMessage ? new Date(a.lastMessage.createdAt).getTime() : new Date(a.createdAt).getTime();
       const bTime = b.lastMessage ? new Date(b.lastMessage.createdAt).getTime() : new Date(b.createdAt).getTime();
       return bTime - aTime;
     });
-  }, [state.conversations]);
+  }, [state.conversations, state.currentUser]);
 
   const filteredConversations = useMemo(() => {
     if (!searchQuery || showSearch) return sortedConversations;
@@ -170,10 +179,12 @@ export default function Sidebar({ onOpenSettings, isMobile }: Props) {
           ) : (
             <div className="py-1">
               {filteredConversations.map(conv => {
+                if (!state.currentUser) return null;
+                const isSaved = isSavedMessagesConversation(conv, state.currentUser.id);
                 const other = getOtherUser(conv);
-                if (!other) return null;
+                if (!other && !isSaved) return null;
                 const isActive = state.activeConversationId === conv.id;
-                const online = isUserOnline(other.id);
+                const online = other ? isUserOnline(other.id) : false;
 
                 return (
                   <button
@@ -185,14 +196,24 @@ export default function Sidebar({ onOpenSettings, isMobile }: Props) {
                     }}
                   >
                     <div className="relative flex-shrink-0">
-                      <Avatar user={other} size={48} />
-                      {online && (
-                        <div className="absolute bottom-0 right-0 w-3.5 h-3.5 rounded-full border-2" style={{ backgroundColor: 'var(--color-success)', borderColor: 'var(--color-surface)' }} />
+                      {isSaved ? (
+                        <div className="w-12 h-12 rounded-full flex items-center justify-center" style={{ backgroundColor: 'var(--color-primary)' }}>
+                          <Bookmark className="w-6 h-6 text-white fill-white" />
+                        </div>
+                      ) : (
+                        <>
+                          <Avatar user={other!} size={48} />
+                          {online && (
+                            <div className="absolute bottom-0 right-0 w-3.5 h-3.5 rounded-full border-2" style={{ backgroundColor: 'var(--color-success)', borderColor: 'var(--color-surface)' }} />
+                          )}
+                        </>
                       )}
                     </div>
                     <div className="flex-1 min-w-0">
                       <div className="flex items-center justify-between">
-                        <p className="text-sm font-semibold truncate" style={{ color: 'var(--color-text)' }}>{other.name}</p>
+                        <p className="text-sm font-semibold truncate" style={{ color: isSaved ? 'var(--color-primary)' : 'var(--color-text)' }}>
+                          {isSaved ? 'Сохранённые сообщения' : other!.name}
+                        </p>
                         {conv.lastMessage && (
                           <span className="text-xs flex-shrink-0 ml-2" style={{ color: 'var(--color-text-muted)' }}>
                             {formatTime(conv.lastMessage.createdAt)}
@@ -200,8 +221,8 @@ export default function Sidebar({ onOpenSettings, isMobile }: Props) {
                         )}
                       </div>
                       <div className="flex items-center justify-between mt-0.5">
-                        <p className="text-xs truncate" style={{ color: 'var(--color-text-secondary)' }}>
-                          {getLastMessagePreview(conv)}
+                        <p className="text-xs truncate" style={{ color: isSaved ? 'var(--color-primary)' : 'var(--color-text-secondary)', opacity: isSaved ? 0.8 : 1 }}>
+                          {isSaved ? 'Заметки, ссылки, файлы' : getLastMessagePreview(conv)}
                         </p>
                         {conv.unreadCount > 0 && (
                           <span className="flex-shrink-0 ml-2 min-w-[20px] h-5 flex items-center justify-center rounded-full text-xs font-medium text-white px-1.5" style={{ backgroundColor: 'var(--color-primary)' }}>
