@@ -54,7 +54,7 @@ export default function ChatArea({ onBack }: Props) {
     } else {
       dispatch({ type: 'SET_MESSAGES', messages: [] });
     }
-  }, [state.activeConversationId, dispatch]);
+  }, [state.activeConversationId, activeConv, dispatch]);
 
   useEffect(() => {
     messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' });
