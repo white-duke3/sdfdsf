@@ -32,6 +32,7 @@ export interface Message {
   replyToId?: string;
   forwardedFrom?: string;
   attachment?: Attachment;
+  attachments?: Attachment[]; // Для коллажей из нескольких медиа
   status: MessageStatus;
   createdAt: string;
   updatedAt?: string;

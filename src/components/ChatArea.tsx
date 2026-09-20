@@ -193,6 +193,63 @@ export default function ChatArea({ onBack }: Props) {
     addToast('Файл отправлен', 'success');
   };
 
+  const handleMultipleFilesSend = (files: File[]) => {
+    if (!state.activeConversationId) return;
+    
+    const MAX_SIZE = 50 * 1024 * 1024;
+    const MAX_PER_MESSAGE = 9;
+    
+    // Фильтруем файлы по размеру
+    const validFiles = files.filter(file => {
+      if (file.size > MAX_SIZE) {
+        addToast(`${file.name} слишком большой (макс. 50 МБ)`, 'error');
+        return false;
+      }
+      return true;
+    });
+    
+    if (validFiles.length === 0) return;
+    
+    // Разбиваем на группы по 9 файлов
+    const chunks: File[][] = [];
+    for (let i = 0; i < validFiles.length; i += MAX_PER_MESSAGE) {
+      chunks.push(validFiles.slice(i, i + MAX_PER_MESSAGE));
+    }
+    
+    // Отправляем каждую группу как отдельное сообщение
+    chunks.forEach((chunk, chunkIndex) => {
+      const attachments = chunk.map((file, index) => ({
+        id: `att-${Date.now()}-${chunkIndex}-${index}`,
+        fileName: file.name,
+        originalName: file.name,
+        mimeType: file.type,
+        size: file.size,
+        url: URL.createObjectURL(file),
+      }));
+      
+      // Если только один файл, отправляем как обычное сообщение
+      if (attachments.length === 1) {
+        const attachment = attachments[0];
+        let type: 'image' | 'video' | 'file' = 'file';
+        if (attachment.mimeType.startsWith('image/')) type = 'image';
+        else if (attachment.mimeType.startsWith('video/')) type = 'video';
+        
+        sendMessage(state.activeConversationId!, {
+          type,
+          attachment,
+        });
+      } else {
+        // Несколько файлов - отправляем как коллаж
+        sendMessage(state.activeConversationId!, {
+          type: 'image', // Используем image как базовый тип для коллажа
+          attachments, // Множественные вложения
+        });
+      }
+    });
+    
+    addToast(`${validFiles.length} файл(ов) отправлено`, 'success');
+  };
+
   if (!activeConv || (!otherUser && !isSaved)) {
     return (
       <div className="flex-1 flex items-center justify-center" style={{ backgroundColor: 'var(--color-bg-secondary)' }}>
@@ -225,7 +282,7 @@ export default function ChatArea({ onBack }: Props) {
 
   return (
     <FileDropZone onSend={handleFileSend}>
-    <div className="flex-1 flex flex-col h-full" style={{ backgroundColor: 'var(--color-bg-secondary)' }}>
+    <div className="flex-1 flex flex-col h-full min-w-0" style={{ backgroundColor: 'var(--color-bg-secondary)' }}>
       {/* Chat Header */}
       <div className="flex items-center gap-3 px-4 py-3 shadow-sm" style={{ backgroundColor: 'var(--color-surface)', borderBottom: '1px solid var(--color-border)' }}>
         {onBack && (
@@ -332,11 +389,13 @@ export default function ChatArea({ onBack }: Props) {
       <input
         ref={fileInputRef}
         type="file"
+        multiple
+        accept="image/*,video/*"
         className="hidden"
         onChange={(e) => {
-          const file = e.target.files?.[0];
-          if (file) {
-            handleFileSend(file);
+          const files = Array.from(e.target.files || []);
+          if (files.length > 0) {
+            handleMultipleFilesSend(files);
             e.target.value = '';
           }
         }}

@@ -4,6 +4,8 @@ import { format } from 'date-fns';
 import { Check, CheckCheck, Clock, AlertCircle } from 'lucide-react';
 import Avatar from './Avatar';
 import AudioPlayer from './AudioPlayer';
+import VideoPlayer from './VideoPlayer';
+import MediaCollage from './MediaCollage';
 import { getUserById } from '../store';
 
 interface Props {
@@ -107,7 +109,17 @@ export default function MessageBubble({ message, isOwn, onContextMenu, onReply, 
             id={`msg-${message.id}`}
             className={`px-4 py-2 ${isOwn ? 'msg-bubble-out' : 'msg-bubble-in'} group relative`}
           >
-            {message.type === 'image' && message.attachment && (
+            {/* Коллаж из нескольких медиа */}
+            {message.attachments && message.attachments.length > 0 && (
+              <MediaCollage
+                attachments={message.attachments}
+                isOwn={isOwn}
+                onImageClick={onImageClick}
+              />
+            )}
+            
+            {/* Одиночное изображение */}
+            {message.type === 'image' && message.attachment && !message.attachments && (
               <div className="mb-1 -mx-1 overflow-hidden rounded-xl">
                 <img
                   src={message.attachment.url}
@@ -118,12 +130,13 @@ export default function MessageBubble({ message, isOwn, onContextMenu, onReply, 
                 />
               </div>
             )}
-            {message.type === 'video' && message.attachment && (
+            
+            {/* Одиночное видео */}
+            {message.type === 'video' && message.attachment && !message.attachments && (
               <div className="mb-1 -mx-1">
-                <video
-                  src={message.attachment.url}
-                  controls
-                  className="rounded-xl max-w-[280px] max-h-[280px]"
+                <VideoPlayer
+                  url={message.attachment.url}
+                  isOwn={isOwn}
                 />
               </div>
             )}

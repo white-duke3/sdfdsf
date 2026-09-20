@@ -104,13 +104,18 @@ export default function VoiceRecorder({ onSend, onCancel }: Props) {
 
       mediaRecorder.onstop = () => {
         const blob = new Blob(chunksRef.current, { type: mimeType });
-        setAudioBlob(blob);
-        setAudioUrl(URL.createObjectURL(blob));
-        setIsPreview(true);
-        setIsRecording(false);
+        const duration = finalDurationRef.current > 0 ? finalDurationRef.current : (Date.now() - startTimeRef.current) / 1000;
+        
+        // Сразу отправляем сообщение без показа preview
+        onSend(blob, duration);
+        
+        // Очистка
         stream.getTracks().forEach(track => track.stop());
         if (animationRef.current) {
           cancelAnimationFrame(animationRef.current);
+        }
+        if (audioContextRef.current) {
+          audioContextRef.current.close();
         }
       };
 
@@ -147,14 +152,6 @@ export default function VoiceRecorder({ onSend, onCancel }: Props) {
       cancelAnimationFrame(animationRef.current);
     }
   }, []);
-
-  const handleSend = () => {
-    if (audioBlob) {
-      // Используем точное значение duration из ref
-      const finalDuration = finalDurationRef.current > 0 ? finalDurationRef.current : duration;
-      onSend(audioBlob, finalDuration);
-    }
-  };
 
   const handleCancel = () => {
     if (mediaRecorderRef.current && mediaRecorderRef.current.state !== 'inactive') {
@@ -239,34 +236,6 @@ export default function VoiceRecorder({ onSend, onCancel }: Props) {
           </button>
           <button
             onClick={stopRecording}
-            className="p-2.5 rounded-full transition-all-fast hover:opacity-90 flex-shrink-0"
-            style={{ backgroundColor: 'var(--color-primary)' }}
-            title="Отправить"
-          >
-            <Send className="w-5 h-5 text-white" />
-          </button>
-        </>
-      )}
-
-      {isPreview && audioUrl && (
-        <>
-          <div className="flex-1">
-            <AudioPlayer
-              url={audioUrl}
-              duration={finalDurationRef.current > 0 ? finalDurationRef.current : duration}
-              isOwn={false}
-            />
-          </div>
-          <button
-            onClick={handleCancel}
-            className="p-2.5 rounded-full transition-all-fast hover:opacity-70 flex-shrink-0"
-            style={{ backgroundColor: 'var(--color-bg-tertiary)', color: 'var(--color-danger)' }}
-            title="Удалить"
-          >
-            <Trash2 className="w-5 h-5" />
-          </button>
-          <button
-            onClick={handleSend}
             className="p-2.5 rounded-full transition-all-fast hover:opacity-90 flex-shrink-0"
             style={{ backgroundColor: 'var(--color-primary)' }}
             title="Отправить"
