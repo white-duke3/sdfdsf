@@ -23,21 +23,21 @@
 }
 
 .dark {
-  --color-primary: #4A6FD9;
-  --color-primary-hover: #3A5FC9;
-  --color-primary-light: #2A2A3A;
-  --color-bg: #1a1a1a;
-  --color-bg-secondary: #242424;
-  --color-bg-tertiary: #2F2F2F;
-  --color-surface: #242424;
-  --color-border: #3A3A3A;
-  --color-text: #F5F5F5;
-  --color-text-secondary: #B0B0B0;
-  --color-text-muted: #707070;
+  --color-primary: #5B7FD9;
+  --color-primary-hover: #4A6FC9;
+  --color-primary-light: #1E2A4A;
+  --color-bg: #0F1A2E;
+  --color-bg-secondary: #162138;
+  --color-bg-tertiary: #1E2A4A;
+  --color-surface: #162138;
+  --color-border: #2A3A5A;
+  --color-text: #FFF0C9;
+  --color-text-secondary: #C9B896;
+  --color-text-muted: #8A7A5A;
   --color-msg-out: #243B8F;
-  --color-msg-out-text: #ffffff;
-  --color-msg-in: #2F2F2F;
-  --color-msg-in-text: #F5F5F5;
+  --color-msg-out-text: #FFF0C9;
+  --color-msg-in: #1E2A4A;
+  --color-msg-in-text: #FFF0C9;
   --color-danger: #f87171;
   --color-success: #4ade80;
 }

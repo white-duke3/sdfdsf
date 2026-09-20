@@ -3,6 +3,7 @@ import { Message } from '../types';
 import { format } from 'date-fns';
 import { Check, CheckCheck, Clock, AlertCircle } from 'lucide-react';
 import Avatar from './Avatar';
+import AudioPlayer from './AudioPlayer';
 import { getUserById } from '../store';
 
 interface Props {
@@ -82,7 +83,14 @@ export default function MessageBubble({ message, isOwn, onContextMenu, onReply, 
               }}
               onClick={() => {
                 const el = document.getElementById(`msg-${replyMessage.id}`);
-                el?.scrollIntoView({ behavior: 'smooth', block: 'center' });
+                if (el) {
+                  el.scrollIntoView({ behavior: 'smooth', block: 'center' });
+                  // Add highlight effect
+                  el.classList.add('animate-pulse');
+                  setTimeout(() => {
+                    el.classList.remove('animate-pulse');
+                  }, 2000);
+                }
               }}
             >
               <p className="font-medium" style={{ color: isOwn ? 'rgba(255,255,255,0.8)' : 'var(--color-primary)' }}>
@@ -120,43 +128,11 @@ export default function MessageBubble({ message, isOwn, onContextMenu, onReply, 
               </div>
             )}
             {message.type === 'audio' && message.attachment && (
-              <div className="flex items-center gap-3 py-1 min-w-[220px]">
-                <button 
-                  onClick={() => {
-                    const audio = new Audio(message.attachment!.url);
-                    audio.play();
-                  }}
-                  className="w-10 h-10 rounded-full flex items-center justify-center flex-shrink-0 transition-all-fast hover:opacity-80 hover:scale-105" 
-                  style={{ backgroundColor: isOwn ? 'rgba(255,255,255,0.2)' : 'var(--color-primary)' }}
-                >
-                  <svg className="w-4 h-4 ml-0.5" fill="white" viewBox="0 0 24 24">
-                    <path d="M8 5v14l11-7z"/>
-                  </svg>
-                </button>
-                <div className="flex-1">
-                  <div className="flex items-center gap-0.5 h-8">
-                    {Array.from({ length: 30 }).map((_, i) => {
-                      // Generate consistent waveform based on message ID
-                      const seed = message.id ? message.id.charCodeAt(i % message.id.length) : i;
-                      const height = 6 + Math.sin(i * 0.4 + seed * 0.1) * 10 + Math.cos(i * 0.7) * 4;
-                      return (
-                        <div
-                          key={i}
-                          className="w-0.5 rounded-full transition-all"
-                          style={{
-                            height: `${Math.max(4, height)}px`,
-                            backgroundColor: isOwn ? 'rgba(255,255,255,0.7)' : 'var(--color-primary)',
-                            opacity: 0.6 + Math.sin(i * 0.3) * 0.3,
-                          }}
-                        />
-                      );
-                    })}
-                  </div>
-                  <span className="text-[10px] mt-0.5" style={{ color: isOwn ? 'rgba(255,255,255,0.7)' : 'var(--color-text-muted)' }}>
-                    {message.attachment.duration ? `${Math.floor(message.attachment.duration / 60)}:${(message.attachment.duration % 60).toString().padStart(2, '0')}` : '0:00'}
-                  </span>
-                </div>
-              </div>
+              <AudioPlayer
+                url={message.attachment.url}
+                duration={message.attachment.duration}
+                isOwn={isOwn}
+              />
             )}
             {message.type === 'file' && message.attachment && (
               <div className="flex items-center gap-3 py-1">

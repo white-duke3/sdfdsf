@@ -125,6 +125,11 @@ export function AppProvider({ children }: { children: ReactNode }) {
     store.setTheme(state.theme);
   }, [state.theme]);
 
+  // Save settings to localStorage
+  useEffect(() => {
+    store.saveSettings(state.settings);
+  }, [state.settings]);
+
   const addToast = useCallback((message: string, type: 'success' | 'error' | 'info' = 'info') => {
     const id = `toast-${Date.now()}`;
     dispatch({ type: 'ADD_TOAST', toast: { id, message, type } });
@@ -242,11 +247,17 @@ export function AppProvider({ children }: { children: ReactNode }) {
 
           store.addMessage(reply);
           dispatch({ type: 'ADD_MESSAGE', message: reply });
-          store.updateConversation(conversationId, { lastMessage: reply });
+          
+          // Update lastMessage and unread counter
+          const currentConv = store.getConversationById(conversationId);
+          const isViewingChat = state.activeConversationId === conversationId;
+          const newUnreadCount = isViewingChat ? 0 : (currentConv?.unreadCount || 0) + 1;
+          
+          store.updateConversation(conversationId, { lastMessage: reply, unreadCount: newUnreadCount });
           dispatch({
             type: 'UPDATE_CONVERSATION',
             id: conversationId,
-            data: { lastMessage: reply },
+            data: { lastMessage: reply, unreadCount: newUnreadCount },
           });
 
           // Mark original as read
