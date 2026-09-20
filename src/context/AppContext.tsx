@@ -185,6 +185,7 @@ export function AppProvider({ children }: { children: ReactNode }) {
       text: messageData.text,
       replyToId: messageData.replyToId,
       attachment: messageData.attachment,
+      attachments: messageData.attachments,
       status: isSaved ? 'read' : 'sent',
       createdAt: new Date().toISOString(),
       readBy: [state.currentUser.id],

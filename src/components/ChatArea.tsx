@@ -178,16 +178,18 @@ export default function ChatArea({ onBack }: Props) {
     if (file.type.startsWith('image/')) type = 'image';
     else if (file.type.startsWith('video/')) type = 'video';
 
+    const attachment = {
+      id: `att-${Date.now()}`,
+      fileName: file.name,
+      originalName: file.name,
+      mimeType: file.type,
+      size: file.size,
+      url,
+    };
+
     sendMessage(state.activeConversationId, {
       type,
-      attachment: {
-        id: `att-${Date.now()}`,
-        fileName: file.name,
-        originalName: file.name,
-        mimeType: file.type,
-        size: file.size,
-        url,
-      },
+      attachment,
     });
     
     addToast('Файл отправлен', 'success');

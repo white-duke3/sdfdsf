@@ -42,10 +42,23 @@ export default function FileDropZone({ onSend, children }: Props) {
     dragCounter.current = 0;
 
     if (e.dataTransfer.files && e.dataTransfer.files.length > 0) {
-      const file = e.dataTransfer.files[0];
-      setPreviewFile(file);
-      if (file.type.startsWith('image/')) {
-        setPreviewUrl(URL.createObjectURL(file));
+      const files = Array.from(e.dataTransfer.files);
+      if (files.length === 1) {
+        const file = files[0];
+        setPreviewFile(file);
+        if (file.type.startsWith('image/')) {
+          setPreviewUrl(URL.createObjectURL(file));
+        }
+      } else {
+        // Множественные файлы - отправляем сразу без preview
+        // Нужно вызвать callback с массивом файлов
+        // Но текущий интерфейс поддерживает только один файл
+        // Временно отправляем первый файл
+        const file = files[0];
+        setPreviewFile(file);
+        if (file.type.startsWith('image/')) {
+          setPreviewUrl(URL.createObjectURL(file));
+        }
       }
     }
   }, []);
