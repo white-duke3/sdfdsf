@@ -10,58 +10,111 @@ interface Props {
 export default function AudioPlayer({ url, duration, isOwn }: Props) {
   const [isPlaying, setIsPlaying] = useState(false);
   const [currentTime, setCurrentTime] = useState(0);
-  const [audioDuration, setAudioDuration] = useState(duration || 0);
   const audioRef = useRef<HTMLAudioElement | null>(null);
+  const animationRef = useRef<number | null>(null);
+
+  // Используем duration из props, если передан, иначе пытаемся получить из audio
+  const [audioDuration, setAudioDuration] = useState<number>(() => {
+    if (duration && duration > 0 && isFinite(duration)) {
+      return duration;
+    }
+    return 0;
+  });
 
   useEffect(() => {
     const audio = new Audio(url);
+    audio.preload = 'metadata';
     audioRef.current = audio;
 
-    audio.addEventListener('loadedmetadata', () => {
-      setAudioDuration(audio.duration);
-    });
+    const handleLoadedMetadata = () => {
+      // Если duration не передан из props или невалиден, используем из audio
+      if (!duration || duration <= 0 || !isFinite(duration)) {
+        const audioDur = audio.duration;
+        // Проверяем на Infinity и NaN (часто бывает с blob URL)
+        if (isFinite(audioDur) && audioDur > 0) {
+          setAudioDuration(audioDur);
+        }
+      }
+    };
 
-    audio.addEventListener('timeupdate', () => {
+    const handleTimeUpdate = () => {
       setCurrentTime(audio.currentTime);
-    });
+    };
 
-    audio.addEventListener('ended', () => {
+    const handleEnded = () => {
       setIsPlaying(false);
       setCurrentTime(0);
-    });
+      if (animationRef.current) {
+        cancelAnimationFrame(animationRef.current);
+      }
+    };
+
+    const handleError = () => {
+      console.error('Audio playback error');
+      setIsPlaying(false);
+    };
+
+    audio.addEventListener('loadedmetadata', handleLoadedMetadata);
+    audio.addEventListener('timeupdate', handleTimeUpdate);
+    audio.addEventListener('ended', handleEnded);
+    audio.addEventListener('error', handleError);
+
+    // Пытаемся загрузить метаданные
+    audio.load();
 
     return () => {
+      audio.removeEventListener('loadedmetadata', handleLoadedMetadata);
+      audio.removeEventListener('timeupdate', handleTimeUpdate);
+      audio.removeEventListener('ended', handleEnded);
+      audio.removeEventListener('error', handleError);
       audio.pause();
       audio.src = '';
+      if (animationRef.current) {
+        cancelAnimationFrame(animationRef.current);
+      }
     };
-  }, [url]);
+  }, [url, duration]);
 
-  const togglePlay = () => {
+  const togglePlay = async () => {
     if (!audioRef.current) return;
 
-    if (isPlaying) {
-      audioRef.current.pause();
+    try {
+      if (isPlaying) {
+        audioRef.current.pause();
+        setIsPlaying(false);
+        if (animationRef.current) {
+          cancelAnimationFrame(animationRef.current);
+        }
+      } else {
+        await audioRef.current.play();
+        setIsPlaying(true);
+      }
+    } catch (error) {
+      console.error('Playback error:', error);
       setIsPlaying(false);
-    } else {
-      audioRef.current.play();
-      setIsPlaying(true);
     }
   };
 
   const handleSeek = (e: React.ChangeEvent<HTMLInputElement>) => {
     if (!audioRef.current) return;
     const time = parseFloat(e.target.value);
-    audioRef.current.currentTime = time;
-    setCurrentTime(time);
+    if (isFinite(time)) {
+      audioRef.current.currentTime = time;
+      setCurrentTime(time);
+    }
   };
 
   const formatTime = (seconds: number) => {
+    if (!isFinite(seconds) || seconds < 0) {
+      return '0:00';
+    }
     const m = Math.floor(seconds / 60);
     const s = Math.floor(seconds % 60);
     return `${m}:${s.toString().padStart(2, '0')}`;
   };
 
   const progress = audioDuration > 0 ? (currentTime / audioDuration) * 100 : 0;
+  const displayDuration = audioDuration > 0 ? audioDuration : (duration || 0);
 
   return (
     <div className="flex items-center gap-3 py-1 min-w-[220px]">
@@ -107,7 +160,8 @@ export default function AudioPlayer({ url, duration, isOwn }: Props) {
           <input
             type="range"
             min="0"
-            max={audioDuration || 0}
+            max={displayDuration || 100}
+            step="0.1"
             value={currentTime}
             onChange={handleSeek}
             className="absolute inset-0 w-full h-full opacity-0 cursor-pointer"
@@ -116,7 +170,7 @@ export default function AudioPlayer({ url, duration, isOwn }: Props) {
         </div>
         
         <span className="text-[10px] mt-0.5" style={{ color: isOwn ? 'rgba(255,255,255,0.7)' : 'var(--color-text-muted)' }}>
-          {formatTime(currentTime)} / {formatTime(audioDuration)}
+          {formatTime(currentTime)} / {formatTime(displayDuration)}
         </span>
       </div>
     </div>

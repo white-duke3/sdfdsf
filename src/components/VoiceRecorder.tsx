@@ -18,6 +18,7 @@ export default function VoiceRecorder({ onSend, onCancel }: Props) {
   const chunksRef = useRef<Blob[]>([]);
   const timerRef = useRef<ReturnType<typeof setInterval> | null>(null);
   const startTimeRef = useRef<number>(0);
+  const finalDurationRef = useRef<number>(0); // Точная длительность в секундах
   const audioContextRef = useRef<AudioContext | null>(null);
   const analyserRef = useRef<AnalyserNode | null>(null);
   const animationRef = useRef<number | null>(null);
@@ -97,7 +98,8 @@ export default function VoiceRecorder({ onSend, onCancel }: Props) {
       visualizeAudio();
       
       timerRef.current = setInterval(() => {
-        setDuration(Math.floor((Date.now() - startTimeRef.current) / 1000));
+        const elapsed = (Date.now() - startTimeRef.current) / 1000;
+        setDuration(Math.floor(elapsed));
       }, 100);
     } catch {
       setError('Не удалось получить доступ к микрофону');
@@ -105,6 +107,11 @@ export default function VoiceRecorder({ onSend, onCancel }: Props) {
   }, [visualizeAudio]);
 
   const stopRecording = useCallback(() => {
+    // Сохраняем точную длительность перед остановкой
+    if (startTimeRef.current > 0) {
+      finalDurationRef.current = (Date.now() - startTimeRef.current) / 1000;
+    }
+    
     if (mediaRecorderRef.current && mediaRecorderRef.current.state !== 'inactive') {
       mediaRecorderRef.current.stop();
     }
@@ -119,7 +126,9 @@ export default function VoiceRecorder({ onSend, onCancel }: Props) {
 
   const handleSend = () => {
     if (audioBlob) {
-      onSend(audioBlob, duration);
+      // Используем точное значение duration из ref
+      const finalDuration = finalDurationRef.current > 0 ? finalDurationRef.current : duration;
+      onSend(audioBlob, finalDuration);
     }
   };
 
