@@ -90,14 +90,24 @@ export default function Sidebar({ onOpenSettings, isMobile }: Props) {
   };
 
   return (
-    <div className={`flex flex-col h-full ${isMobile ? 'w-full' : 'w-80 lg:w-96'} border-r`} style={{ backgroundColor: 'var(--color-surface)', borderColor: 'var(--color-border)' }}>
+    <div className={`flex flex-col h-full ${isMobile ? 'w-full' : 'w-80 lg:w-96'} border-r`} style={{ 
+      backgroundColor: 'var(--color-surface)', 
+      borderColor: 'var(--color-border)',
+      backdropFilter: 'blur(24px)',
+    }}>
       {/* Header */}
-      <div className="p-4 flex items-center justify-between" style={{ borderBottom: '1px solid var(--color-border)' }}>
-        <div className="flex items-center gap-2">
-          <div className="w-9 h-9 rounded-xl flex items-center justify-center" style={{ backgroundColor: 'var(--color-primary)' }}>
+      <div className="p-5 flex items-center justify-between" style={{ 
+        borderBottom: '1px solid rgba(235,240,247,.7)',
+        backgroundColor: 'rgba(255,255,255,.8)',
+      }}>
+        <div className="flex items-center gap-3">
+          <div className="w-10 h-10 rounded-xl flex items-center justify-center" style={{ 
+            background: 'linear-gradient(145deg, #2394ff, #0f79ed)',
+            boxShadow: '0 4px 12px rgba(27, 127, 235, .2)',
+          }}>
             <MessageCircle className="w-5 h-5 text-white" />
           </div>
-          <span className="font-bold text-lg" style={{ color: 'var(--color-text)' }}>ChatFlow</span>
+          <span className="font-bold text-xl tracking-tight" style={{ color: 'var(--color-text)' }}>ChatFlow</span>
         </div>
         <div className="flex items-center gap-1">
           <button
@@ -122,16 +132,20 @@ export default function Sidebar({ onOpenSettings, isMobile }: Props) {
       </div>
 
       {/* Search */}
-      <div className="p-3">
+      <div className="p-4">
         <div className="relative">
           <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4" style={{ color: 'var(--color-text-muted)' }} />
           <input
             type="text"
             value={searchQuery}
             onChange={e => handleSearch(e.target.value)}
-            placeholder="Поиск пользователей или чатов..."
-            className="w-full pl-10 pr-4 py-2.5 rounded-xl text-sm transition-all-fast"
-            style={{ backgroundColor: 'var(--color-bg-tertiary)', color: 'var(--color-text)', border: '1px solid var(--color-border)' }}
+            placeholder="Поиск..."
+            className="w-full pl-10 pr-4 py-3 rounded-2xl text-sm transition-all-fast"
+            style={{ 
+              backgroundColor: 'var(--color-bg-tertiary)', 
+              color: 'var(--color-text)', 
+              border: '1.5px solid #d7e0eb',
+            }}
           />
         </div>
       </div>

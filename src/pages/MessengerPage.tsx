@@ -26,7 +26,7 @@ export default function MessengerPage() {
   }, [state.activeConversationId, isMobile]);
 
   return (
-    <div className="h-screen flex overflow-hidden" style={{ backgroundColor: 'var(--color-bg)' }}>
+    <div className="h-[100dvh] flex overflow-hidden" style={{ backgroundColor: 'var(--color-bg)' }}>
       {/* Sidebar */}
       {(!isMobile || !showChat) && (
         <Sidebar

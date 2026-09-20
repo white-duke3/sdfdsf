@@ -54,7 +54,7 @@ export default function ChatArea({ onBack }: Props) {
     } else {
       dispatch({ type: 'SET_MESSAGES', messages: [] });
     }
-  }, [state.activeConversationId, dispatch]);
+  }, [state.activeConversationId, activeConv, dispatch]);
 
   useEffect(() => {
     messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' });
@@ -178,19 +178,78 @@ export default function ChatArea({ onBack }: Props) {
     if (file.type.startsWith('image/')) type = 'image';
     else if (file.type.startsWith('video/')) type = 'video';
 
+    const attachment = {
+      id: `att-${Date.now()}`,
+      fileName: file.name,
+      originalName: file.name,
+      mimeType: file.type,
+      size: file.size,
+      url,
+    };
+
     sendMessage(state.activeConversationId, {
       type,
-      attachment: {
-        id: `att-${Date.now()}`,
+      attachment,
+    });
+    
+    addToast('Файл отправлен', 'success');
+  };
+
+  const handleMultipleFilesSend = (files: File[]) => {
+    if (!state.activeConversationId) return;
+    
+    const MAX_SIZE = 50 * 1024 * 1024;
+    const MAX_PER_MESSAGE = 9;
+    
+    // Фильтруем файлы по размеру
+    const validFiles = files.filter(file => {
+      if (file.size > MAX_SIZE) {
+        addToast(`${file.name} слишком большой (макс. 50 МБ)`, 'error');
+        return false;
+      }
+      return true;
+    });
+    
+    if (validFiles.length === 0) return;
+    
+    // Разбиваем на группы по 9 файлов
+    const chunks: File[][] = [];
+    for (let i = 0; i < validFiles.length; i += MAX_PER_MESSAGE) {
+      chunks.push(validFiles.slice(i, i + MAX_PER_MESSAGE));
+    }
+    
+    // Отправляем каждую группу как отдельное сообщение
+    chunks.forEach((chunk, chunkIndex) => {
+      const attachments = chunk.map((file, index) => ({
+        id: `att-${Date.now()}-${chunkIndex}-${index}`,
         fileName: file.name,
         originalName: file.name,
         mimeType: file.type,
         size: file.size,
-        url,
-      },
+        url: URL.createObjectURL(file),
+      }));
+      
+      // Если только один файл, отправляем как обычное сообщение
+      if (attachments.length === 1) {
+        const attachment = attachments[0];
+        let type: 'image' | 'video' | 'file' = 'file';
+        if (attachment.mimeType.startsWith('image/')) type = 'image';
+        else if (attachment.mimeType.startsWith('video/')) type = 'video';
+        
+        sendMessage(state.activeConversationId!, {
+          type,
+          attachment,
+        });
+      } else {
+        // Несколько файлов - отправляем как коллаж
+        sendMessage(state.activeConversationId!, {
+          type: 'image', // Используем image как базовый тип для коллажа
+          attachments, // Множественные вложения
+        });
+      }
     });
     
-    addToast('Файл отправлен', 'success');
+    addToast(`${validFiles.length} файл(ов) отправлено`, 'success');
   };
 
   if (!activeConv || (!otherUser && !isSaved)) {
@@ -225,9 +284,13 @@ export default function ChatArea({ onBack }: Props) {
 
   return (
     <FileDropZone onSend={handleFileSend}>
-    <div className="flex-1 flex flex-col h-full" style={{ backgroundColor: 'var(--color-bg-secondary)' }}>
+    <div className="flex-1 flex flex-col h-full min-w-0" style={{ backgroundColor: 'var(--color-bg-secondary)' }}>
       {/* Chat Header */}
-      <div className="flex items-center gap-3 px-4 py-3 shadow-sm" style={{ backgroundColor: 'var(--color-surface)', borderBottom: '1px solid var(--color-border)' }}>
+      <div className="flex items-center gap-3 px-6 py-4 shadow-sm" style={{ 
+        backgroundColor: 'rgba(255,255,255,.8)', 
+        borderBottom: '1px solid rgba(235,240,247,.7)',
+        backdropFilter: 'blur(24px)',
+      }}>
         {onBack && (
           <button onClick={onBack} className="p-1 rounded-lg lg:hidden" style={{ color: 'var(--color-text-secondary)' }}>
             <ArrowLeft className="w-5 h-5" />
@@ -270,11 +333,8 @@ export default function ChatArea({ onBack }: Props) {
       </div>
 
       {/* Messages */}
-      <div className="flex-1 overflow-y-auto px-4 py-4 relative scroll-smooth" style={{
-        backgroundImage: `radial-gradient(circle at 25px 25px, var(--color-border) 1px, transparent 0)`,
-        backgroundSize: '50px 50px',
-        backgroundPosition: '0 0',
-        opacity: 1,
+      <div className="flex-1 overflow-y-auto px-6 py-4 relative scroll-smooth" style={{
+        backgroundColor: 'var(--color-bg-secondary)',
       }}>
         {groupedMessages.map(group => (
           <div key={group.date}>
@@ -332,11 +392,13 @@ export default function ChatArea({ onBack }: Props) {
       <input
         ref={fileInputRef}
         type="file"
+        multiple
+        accept="image/*,video/*"
         className="hidden"
         onChange={(e) => {
-          const file = e.target.files?.[0];
-          if (file) {
-            handleFileSend(file);
+          const files = Array.from(e.target.files || []);
+          if (files.length > 0) {
+            handleMultipleFilesSend(files);
             e.target.value = '';
           }
         }}
@@ -366,18 +428,26 @@ export default function ChatArea({ onBack }: Props) {
           onCancel={() => setIsRecordingVoice(false)}
         />
       ) : (
-        <div className="px-4 py-3" style={{ backgroundColor: 'var(--color-surface)', borderTop: '1px solid var(--color-border)' }}>
-          <div className="flex items-center gap-2">
+        <div className="px-3 py-3" style={{ 
+          background: 'linear-gradient(to top, rgba(248,251,255,.98), rgba(248,251,255,.94))',
+        }}>
+          <div className="flex items-center gap-2.5 p-2 rounded-[26px]" style={{
+            backgroundColor: 'rgba(255,255,255,.98)',
+            boxShadow: '0 -2px 14px rgba(50, 78, 110, .025)',
+          }}>
             <button 
               onClick={() => fileInputRef.current?.click()}
-              className="p-2.5 rounded-full transition-all-fast hover:opacity-70 flex-shrink-0" 
-              style={{ color: 'var(--color-text-secondary)' }}
+              className="w-12 h-12 rounded-full flex items-center justify-center flex-shrink-0 transition-all-fast hover:-translate-y-0.5" 
+              style={{ backgroundColor: '#f1f4f8', color: 'var(--color-text-secondary)' }}
               title="Прикрепить файл"
             >
               <Paperclip className="w-5 h-5" />
             </button>
             <EmojiPicker onSelect={(emoji) => setInputText(prev => prev + emoji)} />
-            <div className="flex-1">
+            <div className="flex-1 min-h-[47px] flex items-center px-4 border-[1.5px] rounded-3xl" style={{
+              borderColor: '#d7e0eb',
+              backgroundColor: 'white',
+            }}>
               <textarea
                 ref={inputRef}
                 value={inputText}
@@ -385,28 +455,30 @@ export default function ChatArea({ onBack }: Props) {
                 onKeyDown={handleKeyDown}
                 placeholder="Напишите сообщение..."
                 rows={1}
-                className="w-full px-4 py-2.5 rounded-2xl text-sm resize-none transition-all-fast"
+                className="w-full text-[15px] resize-none transition-all-fast bg-transparent border-0 outline-none py-3"
                 style={{
-                  backgroundColor: 'var(--color-bg-tertiary)',
                   color: 'var(--color-text)',
-                  border: '1px solid var(--color-border)',
-                  maxHeight: '120px',
+                  maxHeight: '105px',
+                  lineHeight: '1.4',
                 }}
               />
             </div>
             {inputText.trim() ? (
               <button
                 onClick={handleSend}
-                className="p-2.5 rounded-full transition-all-fast hover:opacity-90 flex-shrink-0"
-                style={{ backgroundColor: 'var(--color-primary)' }}
+                className="w-[54px] h-[54px] rounded-full flex items-center justify-center flex-shrink-0 transition-all-fast hover:-translate-y-0.5 hover:scale-102"
+                style={{ 
+                  background: 'linear-gradient(145deg, #2394ff, #0f79ed)',
+                  boxShadow: '0 8px 16px rgba(27, 127, 235, .22)',
+                }}
               >
-                <Send className="w-5 h-5 text-white" />
+                <Send className="w-6 h-6 text-white" />
               </button>
             ) : (
               <button
                 onClick={() => setIsRecordingVoice(true)}
-                className="p-2.5 rounded-full transition-all-fast hover:opacity-70 flex-shrink-0"
-                style={{ color: 'var(--color-text-secondary)' }}
+                className="w-12 h-12 rounded-full flex items-center justify-center flex-shrink-0 transition-all-fast hover:-translate-y-0.5"
+                style={{ backgroundColor: '#f1f4f8', color: 'var(--color-text-secondary)' }}
                 title="Голосовое сообщение"
               >
                 <Mic className="w-5 h-5" />

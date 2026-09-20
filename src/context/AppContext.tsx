@@ -1,6 +1,7 @@
 import React, { createContext, useContext, useReducer, useCallback, useEffect, ReactNode } from 'react';
 import { User, Conversation, Message, TypingState } from '../types';
 import * as store from '../store';
+import { showNotification, playNotificationSound } from '../utils/notifications';
 
 interface AppState {
   currentUser: User | null;
@@ -172,6 +173,10 @@ export function AppProvider({ children }: { children: ReactNode }) {
   const sendMessage = useCallback((conversationId: string, messageData: Partial<Message>) => {
     if (!state.currentUser) return;
 
+    // Check if this is saved messages
+    const conv = store.getConversationById(conversationId);
+    const isSaved = conv && store.isSavedMessagesConversation(conv, state.currentUser.id);
+
     const message: Message = {
       id: `msg-${Date.now()}-${Math.random().toString(36).slice(2)}`,
       conversationId,
@@ -180,7 +185,8 @@ export function AppProvider({ children }: { children: ReactNode }) {
       text: messageData.text,
       replyToId: messageData.replyToId,
       attachment: messageData.attachment,
-      status: 'sent',
+      attachments: messageData.attachments,
+      status: isSaved ? 'read' : 'sent',
       createdAt: new Date().toISOString(),
       readBy: [state.currentUser.id],
     };
@@ -196,17 +202,17 @@ export function AppProvider({ children }: { children: ReactNode }) {
       data: { lastMessage: message },
     });
 
-    // Simulate delivery
+    // For saved messages, no need for delivery simulation
+    if (isSaved) return;
+
+    // Simulate delivery for regular messages
     setTimeout(() => {
       store.updateMessage(message.id, { status: 'delivered' });
       dispatch({ type: 'UPDATE_MESSAGE', id: message.id, data: { status: 'delivered' } });
     }, 500);
 
-    // Simulate auto-reply for demo (skip for saved messages)
-    const conv = store.getConversationById(conversationId);
-    const isSaved = conv && store.isSavedMessagesConversation(conv, state.currentUser!.id);
-    
-    if (conv && !isSaved) {
+    // Simulate auto-reply for demo
+    if (conv) {
       const otherUserId = conv.members.find(m => m !== state.currentUser!.id);
       if (otherUserId) {
         // Show typing
@@ -234,15 +240,22 @@ export function AppProvider({ children }: { children: ReactNode }) {
           ];
           const replyText = replies[Math.floor(Math.random() * replies.length)];
 
+          // Use current state from store instead of closure
+          const currentActiveConv = store.getConversationById(conversationId);
+          const isCurrentlyViewing = currentActiveConv && 
+            state.activeConversationId === conversationId;
+
           const reply: Message = {
             id: `msg-${Date.now()}-${Math.random().toString(36).slice(2)}`,
             conversationId,
             senderId: otherUserId,
             type: 'text',
             text: replyText,
-            status: 'delivered',
+            status: isCurrentlyViewing ? 'read' : 'delivered',
             createdAt: new Date().toISOString(),
-            readBy: [otherUserId, state.currentUser!.id],
+            readBy: isCurrentlyViewing 
+              ? [otherUserId, state.currentUser!.id]
+              : [otherUserId],
           };
 
           store.addMessage(reply);
@@ -260,17 +273,35 @@ export function AppProvider({ children }: { children: ReactNode }) {
             data: { lastMessage: reply, unreadCount: newUnreadCount },
           });
 
-          // Mark original as read
-          store.updateMessage(message.id, { status: 'read', readBy: [state.currentUser!.id, otherUserId] });
-          dispatch({
-            type: 'UPDATE_MESSAGE',
-            id: message.id,
-            data: { status: 'read', readBy: [state.currentUser!.id, otherUserId] },
-          });
+          // Показываем уведомление и воспроизводим звук если чат не открыт
+          if (!isViewingChat && state.settings.notificationsEnabled) {
+            const sender = store.getUserById(otherUserId);
+            if (sender) {
+              showNotification(
+                sender.name,
+                reply.text || 'Новое сообщение',
+                sender.avatar
+              );
+            }
+          }
+
+          if (!isViewingChat && state.settings.soundEnabled) {
+            playNotificationSound();
+          }
+
+          // Mark original as read if currently viewing
+          if (isViewingChat) {
+            store.updateMessage(message.id, { status: 'read', readBy: [state.currentUser!.id, otherUserId] });
+            dispatch({
+              type: 'UPDATE_MESSAGE',
+              id: message.id,
+              data: { status: 'read', readBy: [state.currentUser!.id, otherUserId] },
+            });
+          }
         }, 2500 + Math.random() * 2000);
       }
     }
-  }, [state.currentUser]);
+  }, [state.currentUser, state.activeConversationId]);
 
   const getOtherUser = useCallback((conv: Conversation): User | undefined => {
     if (!state.currentUser) return undefined;
