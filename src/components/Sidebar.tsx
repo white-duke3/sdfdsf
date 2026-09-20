@@ -222,7 +222,7 @@ export default function Sidebar({ onOpenSettings, isMobile }: Props) {
                       </div>
                       <div className="flex items-center justify-between mt-0.5">
                         <p className="text-xs truncate" style={{ color: isSaved ? 'var(--color-primary)' : 'var(--color-text-secondary)', opacity: isSaved ? 0.8 : 1 }}>
-                          {isSaved ? 'Заметки, ссылки, файлы' : getLastMessagePreview(conv)}
+                          {getLastMessagePreview(conv)}
                         </p>
                         {conv.unreadCount > 0 && (
                           <span className="flex-shrink-0 ml-2 min-w-[20px] h-5 flex items-center justify-center rounded-full text-xs font-medium text-white px-1.5" style={{ backgroundColor: 'var(--color-primary)' }}>

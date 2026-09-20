@@ -2,6 +2,7 @@ import React, { useState, useRef, useEffect, useCallback } from 'react';
 import { useApp } from '../context/AppContext';
 import { Message } from '../types';
 import { getMessages, updateMessage as storeUpdateMessage, deleteMessage as storeDeleteMessage, isSavedMessagesConversation } from '../store';
+import * as store from '../store';
 import { ArrowLeft, Phone, Video, MoreVertical, Send, Mic, Paperclip, X, Reply, Edit3, Trash2, Copy, Forward, Bookmark } from 'lucide-react';
 import { useRef as useReactRef } from 'react';
 import Avatar from './Avatar';
@@ -40,6 +41,16 @@ export default function ChatArea({ onBack }: Props) {
     if (state.activeConversationId) {
       const msgs = getMessages(state.activeConversationId);
       dispatch({ type: 'SET_MESSAGES', messages: msgs });
+      
+      // Reset unread counter when opening chat
+      if (activeConv && activeConv.unreadCount > 0) {
+        store.updateConversation(activeConv.id, { unreadCount: 0 });
+        dispatch({
+          type: 'UPDATE_CONVERSATION',
+          id: activeConv.id,
+          data: { unreadCount: 0 },
+        });
+      }
     } else {
       dispatch({ type: 'SET_MESSAGES', messages: [] });
     }
@@ -53,12 +64,25 @@ export default function ChatArea({ onBack }: Props) {
     if (!inputText.trim() || !state.activeConversationId) return;
 
     if (editingMessage) {
-      storeUpdateMessage(editingMessage.id, { text: inputText.trim(), updatedAt: new Date().toISOString() });
+      const updatedText = inputText.trim();
+      storeUpdateMessage(editingMessage.id, { text: updatedText, updatedAt: new Date().toISOString() });
       dispatch({
         type: 'UPDATE_MESSAGE',
         id: editingMessage.id,
-        data: { text: inputText.trim(), updatedAt: new Date().toISOString() },
+        data: { text: updatedText, updatedAt: new Date().toISOString() },
       });
+      
+      // Update conversation lastMessage if edited message was the last one
+      if (activeConv && editingMessage.id === activeConv.lastMessage?.id) {
+        const updatedMessage = { ...editingMessage, text: updatedText, updatedAt: new Date().toISOString() };
+        store.updateConversation(activeConv.id, { lastMessage: updatedMessage });
+        dispatch({
+          type: 'UPDATE_CONVERSATION',
+          id: activeConv.id,
+          data: { lastMessage: updatedMessage },
+        });
+      }
+      
       setEditingMessage(null);
     } else {
       sendMessage(state.activeConversationId, {
@@ -70,7 +94,7 @@ export default function ChatArea({ onBack }: Props) {
     }
     setInputText('');
     inputRef.current?.focus();
-  }, [inputText, state.activeConversationId, editingMessage, replyTo, sendMessage, dispatch]);
+  }, [inputText, state.activeConversationId, editingMessage, replyTo, sendMessage, dispatch, activeConv]);
 
   const handleKeyDown = (e: React.KeyboardEvent) => {
     if (e.key === 'Enter' && !e.shiftKey) {
@@ -85,7 +109,9 @@ export default function ChatArea({ onBack }: Props) {
   };
 
   const handleDeleteMessage = (messageId: string, forEveryone: boolean) => {
+    const deletedMessage = state.messages.find(m => m.id === messageId);
     storeDeleteMessage(messageId, forEveryone);
+    
     if (forEveryone) {
       dispatch({
         type: 'UPDATE_MESSAGE',
@@ -98,6 +124,19 @@ export default function ChatArea({ onBack }: Props) {
         messages: state.messages.filter(m => m.id !== messageId),
       });
     }
+    
+    // Update conversation lastMessage if deleted message was the last one
+    if (deletedMessage && activeConv && deletedMessage.id === activeConv.lastMessage?.id) {
+      const remainingMessages = state.messages.filter(m => m.id !== messageId && !m.deletedAt);
+      const newLastMessage = remainingMessages.length > 0 ? remainingMessages[remainingMessages.length - 1] : undefined;
+      store.updateConversation(activeConv.id, { lastMessage: newLastMessage });
+      dispatch({
+        type: 'UPDATE_CONVERSATION',
+        id: activeConv.id,
+        data: { lastMessage: newLastMessage },
+      });
+    }
+    
     setContextMenu(null);
   };
 
@@ -392,7 +431,17 @@ export default function ChatArea({ onBack }: Props) {
           <button onClick={() => handleReply(contextMenu.message)} className="w-full flex items-center gap-3 px-4 py-2.5 text-sm transition-all-fast hover:opacity-80 text-left" style={{ color: 'var(--color-text)' }}>
             <Reply className="w-4 h-4" /> Ответить
           </button>
-          <button className="w-full flex items-center gap-3 px-4 py-2.5 text-sm transition-all-fast hover:opacity-80 text-left" style={{ color: 'var(--color-text)' }}>
+          <button 
+            onClick={() => {
+              if (contextMenu.message.text) {
+                navigator.clipboard.writeText(contextMenu.message.text);
+                addToast('Скопировано в буфер обмена', 'success');
+              }
+              setContextMenu(null);
+            }}
+            className="w-full flex items-center gap-3 px-4 py-2.5 text-sm transition-all-fast hover:opacity-80 text-left" 
+            style={{ color: 'var(--color-text)' }}
+          >
             <Copy className="w-4 h-4" /> Копировать
           </button>
           <button className="w-full flex items-center gap-3 px-4 py-2.5 text-sm transition-all-fast hover:opacity-80 text-left" style={{ color: 'var(--color-text)' }}>

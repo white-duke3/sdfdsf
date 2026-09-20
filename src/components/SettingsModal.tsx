@@ -2,7 +2,8 @@ import React, { useState } from 'react';
 import { useApp } from '../context/AppContext';
 import { X, User, Shield, Palette, LogOut, Camera } from 'lucide-react';
 import Avatar from './Avatar';
-import { updateUser } from '../store';
+import { updateUser, getUserByUsername } from '../store';
+import * as store from '../store';
 
 interface Props {
   onClose: () => void;
@@ -35,30 +36,54 @@ export default function SettingsModal({ onClose }: Props) {
       addToast('Username: только латинские буквы, цифры и _', 'error');
       return;
     }
+    
+    // Check username uniqueness
+    if (username.toLowerCase() !== user.username.toLowerCase()) {
+      const existingUser = getUserByUsername(username);
+      if (existingUser) {
+        addToast('Этот username уже занят', 'error');
+        return;
+      }
+    }
+    
     const updated = updateUser(user.id, { name: name.trim(), username, bio });
     if (updated) {
       dispatch({ type: 'SET_USER', user: updated });
+      // Sync to localStorage
+      store.setCurrentUser(updated);
       addToast('Профиль обновлён', 'success');
     }
   };
 
   const handleChangePassword = () => {
+    if (!oldPassword) {
+      addToast('Введите текущий пароль', 'error');
+      return;
+    }
+    
+    // Verify current password
+    const passwords = JSON.parse(localStorage.getItem('chatflow_passwords') || '{}');
+    if (passwords[user.id] !== btoa(oldPassword)) {
+      addToast('Неверный текущий пароль', 'error');
+      return;
+    }
+    
     if (newPassword.length < 8) {
-      addToast('Пароль минимум 8 символов', 'error');
+      addToast('Новый пароль минимум 8 символов', 'error');
       return;
     }
     if (newPassword !== newPassword2) {
       addToast('Пароли не совпадают', 'error');
       return;
     }
+    
     // Update password in store
-    const passwords = JSON.parse(localStorage.getItem('chatflow_passwords') || '{}');
     passwords[user.id] = btoa(newPassword);
     localStorage.setItem('chatflow_passwords', JSON.stringify(passwords));
     setOldPassword('');
     setNewPassword('');
     setNewPassword2('');
-    addToast('Пароль изменён', 'success');
+    addToast('Пароль успешно изменён', 'success');
   };
 
   const handleLogout = () => {
